@@ -17,11 +17,11 @@ data Expr
   | Pi !Plicitness (Pat Type QName) Expr
   | Lam !Plicitness (Pat Type QName) Expr
   | App Expr !Plicitness Expr
-  | Let (Vector (SourceLoc, Definition Expr)) Expr
+  | Let (Vector (SourceLocation, Definition Expr)) Expr
   | Case Expr [(Pat Expr QName, Expr)]
   | ExternCode (Extern Expr)
   | Wildcard
-  | SourceLoc !SourceLoc Type
+  | SourceLoc !SourceLocation Type
   deriving Show
 
 type Type = Expr
@@ -37,7 +37,7 @@ data TopLevelDefinition
   = TopLevelDefinition (Definition Expr)
   | TopLevelDataDefinition Name [(Plicitness, Name, Type)] [ConstrDef Expr]
   | TopLevelClassDefinition Name [(Plicitness, Name, Type)] [MethodDef Expr]
-  | TopLevelInstanceDefinition Type [(SourceLoc, Definition Expr)]
+  | TopLevelInstanceDefinition Type [(SourceLocation, Definition Expr)]
   deriving (Show)
 
 data Clause e = Clause (Vector (Plicitness, Pat e QName)) e

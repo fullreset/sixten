@@ -22,7 +22,7 @@ data Pat typ b
   | ConPat (HashSet QConstr) (Vector (Plicitness, Pat typ b))
   | AnnoPat (Pat typ b) typ
   | ViewPat typ (Pat typ b)
-  | PatLoc !SourceLoc (Pat typ b)
+  | PatLoc !SourceLocation (Pat typ b)
   deriving (Foldable, Functor, Show, Traversable)
 
 -------------------------------------------------------------------------------

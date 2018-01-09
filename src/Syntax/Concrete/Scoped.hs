@@ -34,11 +34,11 @@ data Expr v
   | Pi !Plicitness (Pat (PatternScope Type v) ()) (PatternScope Expr v)
   | Lam !Plicitness (Pat (PatternScope Type v) ()) (PatternScope Expr v)
   | App (Expr v) !Plicitness (Expr v)
-  | Let (Vector (SourceLoc, NameHint, PatDefinition (Clause LetVar Expr v), Maybe (Scope LetVar Type v))) (Scope LetVar Expr v)
+  | Let (Vector (SourceLocation, NameHint, PatDefinition (Clause LetVar Expr v), Maybe (Scope LetVar Type v))) (Scope LetVar Expr v)
   | Case (Expr v) [(Pat (PatternScope Type v) (), PatternScope Expr v)]
   | ExternCode (Extern (Expr v))
   | Wildcard
-  | SourceLoc !SourceLoc (Expr v)
+  | SourceLoc !SourceLocation (Expr v)
 
 -- | Synonym for documentation purposes
 type Type = Expr

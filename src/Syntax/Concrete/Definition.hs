@@ -29,7 +29,7 @@ data PatDefinition clause
   = PatDefinition Abstract IsInstance (NonEmpty clause)
   deriving (Foldable, Functor, Show, Traversable)
 
-data PatInstanceDef expr v = PatInstanceDef (Vector (Name, SourceLoc, PatDefinition (Clause Void expr v), Maybe (expr v)))
+data PatInstanceDef expr v = PatInstanceDef (Vector (Name, SourceLocation, PatDefinition (Clause Void expr v), Maybe (expr v)))
   deriving (Foldable, Functor, Show, Traversable)
 
 data Clause b expr v = Clause
