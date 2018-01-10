@@ -4,6 +4,7 @@ module Frontend.Parse where
 import Control.Applicative((<**>), (<|>), Alternative)
 import Control.Monad.Except
 import Control.Monad.Reader
+import Data.Bifunctor
 import Data.Char
 import Data.HashSet(HashSet)
 import qualified Data.HashSet as HashSet
@@ -11,6 +12,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Maybe
 import Data.Ord
 import Data.String
+import Data.Text(Text)
 import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import qualified Text.Parser.LookAhead as LookAhead
@@ -24,20 +26,28 @@ import Syntax.Concrete.Literal
 import Syntax.Concrete.Pattern
 import Syntax.Concrete.Unscoped as Unscoped
 
-newtype Parser a = Parser {runParser :: ReaderT Position Parsix.Parser a}
+data ParseEnv = ParseEnv
+  { parseEnvIndentAnchor :: !Position
+  , parseEnvSourceFile :: FilePath
+  }
+
+newtype Parser a = Parser {runParser :: ReaderT ParseEnv Parsix.Parser a}
   deriving
-    ( Monad, MonadPlus, MonadReader Position, Functor, Applicative, Alternative
+    ( Monad, MonadPlus, MonadReader ParseEnv, Functor, Applicative, Alternative
     , Parsix.Parsing, Parsix.CharParsing, Parsix.SliceParsing, Parsix.RecoveryParsing
     , LookAhead.LookAheadParsing
     )
 
 parseTest :: (MonadIO m, Show a) => Parser a -> String -> m ()
-parseTest p = Parsix.parseTest $ runReaderT (runParser p) (Position 0 0 0) <* Parsix.eof
+parseTest p = Parsix.parseTest $ runReaderT (runParser p) env <* Parsix.eof
+  where
+    env = ParseEnv (Position 0 0 0) "<interactive>"
 
 parseFromFileEx :: MonadIO m => Parser a -> FilePath -> m (Parsix.Result (Parsix.Highlights, a))
-parseFromFileEx p
-  = Parsix.parseFromFileEx
-  $ runReaderT (runParser p) (Position 0 0 0) <* Parsix.eof
+parseFromFileEx p fp
+  = Parsix.parseFromFileEx (runReaderT (runParser p) env <* Parsix.eof) fp
+  where
+    env = ParseEnv (Position 0 0 0) fp
 
 instance Parsix.TokenParsing Parser where
   someSpace = Parsix.skipSome (Parsix.satisfy isSpace) *> (comments <|> pure ())
@@ -68,13 +78,13 @@ multilineComment =
 dropAnchor :: Parser a -> Parser a
 dropAnchor p = do
   pos <- Parsix.position
-  local (const pos) p
+  local (\env -> env { parseEnvIndentAnchor = pos }) p
 
 -- | Check that the current indentation level is the same as the anchor
 sameCol :: Parser ()
 sameCol = do
   pos <- Parsix.position
-  anchor <- ask
+  anchor <- asks parseEnvIndentAnchor
   case comparing visualColumn pos anchor of
     LT -> Parsix.unexpected "unindent"
     EQ -> return ()
@@ -85,7 +95,7 @@ sameCol = do
 sameLineOrIndented :: Parser ()
 sameLineOrIndented = do
   pos <- Parsix.position
-  anchor <- ask
+  anchor <- asks parseEnvIndentAnchor
   case (comparing visualRow pos anchor, comparing visualColumn pos anchor) of
     (EQ, _) -> return () -- Same line
     (GT, GT) -> return () -- Indented
@@ -184,7 +194,12 @@ integer :: Parser Integer
 integer = Parsix.try Parsix.integer
 
 located :: Parser a -> Parser (SourceLocation, a)
-located p = Parsix.spanned p
+located p = do
+  (span, a) <- Parsix.spanned p
+  file <- asks parseEnvSourceFile
+  inp <- Parser $ lift Parsix.input
+  hl <- Parser $ lift Parsix.highlights
+  return (SourceLocation file span inp hl, a)
 
 -------------------------------------------------------------------------------
 -- * Patterns
@@ -268,7 +283,7 @@ manyTypedBindings = concat <$> manySI (Parsix.try typedBinding <|> plicitBinding
 -------------------------------------------------------------------------------
 -- * Expressions
 locatedExpr :: Parser Expr -> Parser Expr
-locatedExpr p = uncurry SourceLoc <$> Parsix.spanned p
+locatedExpr p = uncurry SourceLoc <$> located p
 
 atomicExpr :: Parser Expr
 atomicExpr = locatedExpr

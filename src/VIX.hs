@@ -26,6 +26,7 @@ import System.IO
 import Text.Parsix.Result
 
 import Backend.Target as Target
+import Error
 import Syntax
 import Syntax.Abstract
 import qualified Syntax.Sized.Lifted as Lifted
@@ -34,7 +35,7 @@ import Util.MultiHashMap(MultiHashMap)
 import qualified Util.MultiHashMap as MultiHashMap
 
 data VIXState = VIXState
-  { vixLocation :: Maybe SourceLoc
+  { vixLocation :: Maybe SourceLocation
   , vixContext :: HashMap QName (Definition Expr Void, Type Void)
   , vixModuleNames :: MultiHashMap ModuleName (Either QConstr QName)
   , vixConvertedSignatures :: HashMap QName Lifted.FunSignature
@@ -105,7 +106,7 @@ fresh = liftVIX $ do
   modify $ \s -> s {vixFresh = i + 1}
   return i
 
-located :: MonadVIX m => SourceLoc -> m a -> m a
+located :: MonadVIX m => SourceLocation -> m a -> m a
 located loc m = do
   oldLoc <- liftVIX $ gets vixLocation
   liftVIX $ modify $ \s -> s { vixLocation = Just loc }
@@ -113,7 +114,7 @@ located loc m = do
   liftVIX $ modify $ \s -> s { vixLocation = oldLoc }
   return res
 
-currentLocation :: MonadVIX m => m (Maybe SourceLoc)
+currentLocation :: MonadVIX m => m (Maybe SourceLocation)
 currentLocation = liftVIX $ gets vixLocation
 
 -------------------------------------------------------------------------------
